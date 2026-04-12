@@ -473,7 +473,7 @@ class MainViewModel(application: Application) :
         }
     }
 
-    fun setUseXrayTun(enabled: Boolean) {
+    fun setUseXrayTun(enabled: Boolean = false) {
         prefs.useXrayTun = enabled
         _settingsState.value = _settingsState.value.copy(
             switches = _settingsState.value.switches.copy(useXrayTun = enabled)
