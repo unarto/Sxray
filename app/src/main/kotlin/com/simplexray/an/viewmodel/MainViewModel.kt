@@ -180,7 +180,7 @@ class MainViewModel(application: Application) :
     }
 
     private fun updateSettingsState() {
-        _settingsState.value = _settingsState.value.copy(
+        _settingsState.value = SettingsState(
             socksPort = InputFieldState(prefs.socksPort.toString()),
             socksUser = InputFieldState(prefs.socksUsername),
             socksPass = InputFieldState(prefs.socksPassword),
@@ -192,10 +192,12 @@ class MainViewModel(application: Application) :
                 httpProxyEnabled = prefs.httpProxyEnabled,
                 bypassLanEnabled = prefs.bypassLan,
                 disableVpn = prefs.disableVpn,
+                useXrayTun = prefs.useXrayTun,  // ADD THIS LINE
                 themeMode = prefs.theme
             ),
-            info = _settingsState.value.info.copy(
-                appVersion = BuildConfig.VERSION_NAME,
+            info = InfoStates(
+                appVersion = versionName,
+                kernelVersion = Build.VERSION.RELEASE,
                 geoipSummary = fileManager.getRuleFileSummary("geoip.dat"),
                 geositeSummary = fileManager.getRuleFileSummary("geosite.dat"),
                 geoipUrl = prefs.geoipUrl,
@@ -469,6 +471,14 @@ class MainViewModel(application: Application) :
             )
             false
         }
+    }
+
+    fun setUseXrayTun(enabled: Boolean) {
+        prefs.useXrayTun = enabled
+        _settingsState.value = _settingsState.value.copy(
+            switches = _settingsState.value.switches.copy(useXrayTun = enabled)
+        )
+        Log.d(TAG, "Xray TUN mode: ${if (enabled) "native" else "hev-tun2sock"}")
     }
 
     fun updateDnsIpv4(ipv4Addr: String): Boolean {
