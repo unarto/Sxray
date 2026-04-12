@@ -181,7 +181,7 @@ class MainViewModel(application: Application) :
     }
 
     private fun updateSettingsState() {
-        _settingsState.value = SettingsState(
+        _settingsState.value = _settingsState.value.copy(
             socksPort = InputFieldState(prefs.socksPort.toString()),
             socksUser = InputFieldState(prefs.socksUsername),
             socksPass = InputFieldState(prefs.socksPassword),
@@ -196,7 +196,7 @@ class MainViewModel(application: Application) :
                 useXrayTun = prefs.useXrayTun,  // ADD THIS LINE
                 themeMode = prefs.theme
             ),
-            info = InfoStates(
+            info = _settingsState.value.info.copy(
                 appVersion = BuildConfig.VERSION_NAME,
                 geoipSummary = fileManager.getRuleFileSummary("geoip.dat"),
                 geositeSummary = fileManager.getRuleFileSummary("geosite.dat"),
