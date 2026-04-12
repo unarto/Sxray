@@ -121,4 +121,6 @@
     <string name="theme_dark">深色</string>
     <string name="auto">自动</string>
     <string name="socks_user">SOCKS 用户</string>
+    <string name="tun_mode_title">原生TUN模式</string>
+    <string name="tun_mode_summary">使用Xray原生TUN入站或hev-tun2sock</string>
 </resources>
