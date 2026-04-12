@@ -181,6 +181,7 @@ class FileManager(private val application: Application, private val prefs: Prefe
                     prefs.apps ?: emptySet()
                 )
                 preferencesMap[Preferences.BYPASS_LAN] = prefs.bypassLan
+                preferencesMap[Preferences.USE_XRAY_TUN] = prefs.useXrayTun
                 preferencesMap[Preferences.USE_TEMPLATE] = prefs.useTemplate
                 preferencesMap[Preferences.HTTP_PROXY_ENABLED] = prefs.httpProxyEnabled
                 preferencesMap[Preferences.CONFIG_FILES_ORDER] = prefs.configFilesOrder
