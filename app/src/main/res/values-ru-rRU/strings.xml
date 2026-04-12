@@ -121,4 +121,6 @@
     <string name="theme_dark">Тёмная</string>
     <string name="auto">Автоматически</string>
     <string name="socks_user">Пользователь SOCKS</string>
+    <string name="tun_mode_title">Нативный режим TUN</string>
+    <string name="tun_mode_summary">Используйте встроенный TUN входящий Xray или hev-tun2sock</string>
 </resources>
