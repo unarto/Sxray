@@ -129,7 +129,7 @@ class TProxyService : VpnService() {
                     successIntent.setPackage(application.packageName)
                     sendBroadcast(successIntent)
 
-                    @Suppress("SameParameterValue") val channelName = "nosocks"
+                    @Suppress("SameParameterValue") val channelName = "xray"
                     initNotificationChannel(channelName)
                     createNotification(channelName)
 
@@ -248,7 +248,7 @@ class TProxyService : VpnService() {
     }
 
     private fun stopXray() {
-        Log.d(TAG, "stopXray called with keepExecutorAlive=" + false)
+        Log.d(TAG, "stopXray called")
         serviceScope.cancel()
         Log.d(TAG, "CoroutineScope cancelled.")
 
@@ -269,30 +269,39 @@ class TProxyService : VpnService() {
             stopXray()
             return
         }
-        val tproxyFile = File(cacheDir, "tproxy.conf")
-        try {
-            tproxyFile.createNewFile()
-            FileOutputStream(tproxyFile, false).use { fos ->
-                val tproxyConf = getTproxyConf(prefs)
-                fos.write(tproxyConf.toByteArray())
+
+        // Use Xray native TUN or hev-tun2sock based on preference
+        if (prefs.useXrayTun) {
+            Log.d(TAG, "Using Xray native TUN inbound")
+            Log.d(TAG, "VPN service established. TUN FD: ${tunFd?.fd}")
+        } else {
+            Log.d(TAG, "Using hev-socks5-tunnel (legacy mode)")
+            val tproxyFile = File(cacheDir, "tproxy.conf")
+            try {
+                tproxyFile.createNewFile()
+                FileOutputStream(tproxyFile, false).use { fos ->
+                    val tproxyConf = getTproxyConf(prefs)
+                    fos.write(tproxyConf.toByteArray())
+                }
+            } catch (e: IOException) {
+                Log.e(TAG, e.toString())
+                stopXray()
+                return
             }
-        } catch (e: IOException) {
-            Log.e(TAG, e.toString())
-            stopXray()
-            return
-        }
-        tunFd?.fd?.let { fd ->
-            TProxyStartService(tproxyFile.absolutePath, fd)
-        } ?: run {
-            Log.e(TAG, "tunFd is null after establish()")
-            stopXray()
-            return
+            tunFd?.fd?.let { fd ->
+                TProxyStartService(tproxyFile.absolutePath, fd)
+                Log.d(TAG, "hev-tun2sock service started")
+            } ?: run {
+                Log.e(TAG, "tunFd is null after establish()")
+                stopXray()
+                return
+            }
         }
 
         val successIntent = Intent(ACTION_START)
         successIntent.setPackage(application.packageName)
         sendBroadcast(successIntent)
-        @Suppress("SameParameterValue") val channelName = "socks5"
+        @Suppress("SameParameterValue") val channelName = "xray"
         initNotificationChannel(channelName)
         createNotification(channelName)
     }
@@ -348,7 +357,10 @@ class TProxyService : VpnService() {
                 tunFd = null
             }
             stopForeground(Service.STOP_FOREGROUND_REMOVE)
-            TProxyStopService()
+            val prefs = Preferences(this)
+            if (!prefs.useXrayTun) {
+                TProxyStopService()
+            }
         }
         exit()
     }
