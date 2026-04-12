@@ -121,4 +121,6 @@
     <string name="theme_dark">Gelap</string>
     <string name="auto">Otomatis</string>
     <string name="socks_user">"Pengguna SOCKS "</string>
+    <string name="tun_mode_title">Mode TUN Asli</string>
+    <string name="tun_mode_summary">Gunakan inbound TUN asli Xray (lebih cepat) atau hev-tun2sock (lebih kompatibel)</string>
 </resources>
