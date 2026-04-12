@@ -477,6 +477,20 @@ fun SettingsScreen(
             }
         )
 
+        ListItem(
+            headlineContent = { Text(stringResource(R.string.tun_mode_title)) },
+            supportingContent = { Text(stringResource(R.string.tun_mode_summary)) },
+            trailingContent = {
+                Switch(
+                    checked = settingsState.switches.useXrayTun,
+                    onCheckedChange = {
+                        mainViewModel.setUseXrayTun(it)
+                    },
+                    enabled = !vpnDisabled
+                )
+            }
+        )
+
         PreferenceCategoryTitle(stringResource(R.string.rule_files_category_title))
 
         ListItem(
