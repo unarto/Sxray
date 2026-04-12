@@ -94,7 +94,7 @@ class MainViewModel(application: Application) :
                 httpProxyEnabled = prefs.httpProxyEnabled,
                 bypassLanEnabled = prefs.bypassLan,
                 disableVpn = prefs.disableVpn,
-                useXrayTun = prefs.useXrayTun
+                useXrayTun = prefs.useXrayTun,
                 themeMode = prefs.theme
             ),
             info = InfoStates(
