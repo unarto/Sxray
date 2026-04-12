@@ -189,13 +189,17 @@ class TProxyService : VpnService() {
             prefs.apiAddress = "127.$octet2.$octet3.$octet4"
             Log.d(TAG, "Randomized API address: ${prefs.apiAddress}")
 
-            val processBuilder = getProcessBuilder(xrayPath)
+            val processBuilder = getProcessBuilder(xrayPath, prefs)
             currentProcess = processBuilder.start()
             this.xrayProcess = currentProcess
 
             Log.d(TAG, "Writing config to xray stdin from: $selectedConfigPath")
-            val injectedConfigContent =
+            val injectedConfigContent = if (prefs.useXrayTun && tunFd != null) {
+                // Inject TUN inbound into config when using native TUN
                 ConfigUtils.injectStatsService(prefs, configContent)
+            } else {
+                ConfigUtils.injectStatsService(prefs, configContent)
+            }
             currentProcess.outputStream.use { os ->
                 os.write(injectedConfigContent.toByteArray())
                 os.flush()
@@ -236,12 +240,22 @@ class TProxyService : VpnService() {
         }
     }
 
-    private fun getProcessBuilder(xrayPath: String): ProcessBuilder {
+    private fun getProcessBuilder(xrayPath: String, prefs: Preferences): ProcessBuilder {
         val filesDir = applicationContext.filesDir
         val command: MutableList<String> = mutableListOf(xrayPath)
         val processBuilder = ProcessBuilder(command)
         val environment = processBuilder.environment()
         environment["XRAY_LOCATION_ASSET"] = filesDir.path
+        
+        // Pass TUN FD to Xray when using native TUN mode
+        if (prefs.useXrayTun && tunFd != null) {
+            val tunFdValue = tunFd?.fd
+            if (tunFdValue != null) {
+                environment["XRAY_TUN_FD"] = tunFdValue.toString()
+                Log.d(TAG, "Passed TUN FD ($tunFdValue) to Xray process via environment variable")
+            }
+        }
+        
         processBuilder.directory(filesDir)
         processBuilder.redirectErrorStream(true)
         return processBuilder
@@ -266,14 +280,17 @@ class TProxyService : VpnService() {
         val builder = getVpnBuilder(prefs)
         tunFd = builder.establish()
         if (tunFd == null) {
+            Log.e(TAG, "Failed to establish VPN")
             stopXray()
             return
         }
 
+        Log.d(TAG, "VPN service established. TUN FD: ${tunFd?.fd}")
+
         // Use Xray native TUN or hev-tun2sock based on preference
         if (prefs.useXrayTun) {
-            Log.d(TAG, "Using Xray native TUN inbound")
-            Log.d(TAG, "VPN service established. TUN FD: ${tunFd?.fd}")
+            Log.d(TAG, "Using Xray native TUN inbound mode")
+            // TUN FD will be passed via environment variable in getProcessBuilder
         } else {
             Log.d(TAG, "Using hev-socks5-tunnel (legacy mode)")
             val tproxyFile = File(cacheDir, "tproxy.conf")
@@ -284,13 +301,13 @@ class TProxyService : VpnService() {
                     fos.write(tproxyConf.toByteArray())
                 }
             } catch (e: IOException) {
-                Log.e(TAG, e.toString())
+                Log.e(TAG, "Error creating tproxy config: ${e.message}")
                 stopXray()
                 return
             }
             tunFd?.fd?.let { fd ->
                 TProxyStartService(tproxyFile.absolutePath, fd)
-                Log.d(TAG, "hev-tun2sock service started")
+                Log.d(TAG, "hev-tun2sock service started with FD: $fd")
             } ?: run {
                 Log.e(TAG, "tunFd is null after establish()")
                 stopXray()
