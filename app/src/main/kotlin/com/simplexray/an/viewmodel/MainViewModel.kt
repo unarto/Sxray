@@ -197,8 +197,7 @@ class MainViewModel(application: Application) :
                 themeMode = prefs.theme
             ),
             info = InfoStates(
-                appVersion = versionName,
-                kernelVersion = Build.VERSION.RELEASE,
+                appVersion = BuildConfig.VERSION_NAME,
                 geoipSummary = fileManager.getRuleFileSummary("geoip.dat"),
                 geositeSummary = fileManager.getRuleFileSummary("geosite.dat"),
                 geoipUrl = prefs.geoipUrl,
