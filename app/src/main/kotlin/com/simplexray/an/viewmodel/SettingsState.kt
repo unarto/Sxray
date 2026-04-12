@@ -14,6 +14,7 @@ data class SwitchStates(
     val httpProxyEnabled: Boolean,
     val bypassLanEnabled: Boolean,
     val disableVpn: Boolean,
+    val useXrayTun: Boolean,
     val themeMode: ThemeMode
 )
 
@@ -42,4 +43,4 @@ data class SettingsState(
     val files: FileStates,
     val connectivityTestTarget: InputFieldState,
     val connectivityTestTimeout: InputFieldState
-) 
+)
