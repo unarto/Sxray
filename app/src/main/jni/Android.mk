@@ -13,4 +13,14 @@
 # limitations under the License.
 #
 
+LOCAL_PATH := $(call my-dir)
+
+# --- TAMBAHAN UNTUK LIB XRAY PREBUILT ---
+include $(CLEAR_VARS)
+LOCAL_MODULE    := xray
+# Mengarah ke folder jniLibs yang otomatis diisi oleh script workflow (.yml)
+LOCAL_SRC_FILES := ../jniLibs/$(TARGET_ARCH_ABI)/libxray.so
+include $(PREBUILT_SHARED_LIBRARY)
+# ----------------------------------------
+
 include $(call all-subdir-makefiles)
