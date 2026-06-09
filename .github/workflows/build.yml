@@ -55,7 +55,7 @@ jobs:
           # Mencari folder assets di dalam sub-folder project secara otomatis
           ASSETS_DIR=$(find . -type d -name "assets" | head -n 1)
           echo "Folder assets ditemukan di: $ASSETS_DIR"
-          wget https://github.com/lhear/v2ray-rules-dat/releases/download/${{ env.GEOIP_VERSION }}/geoip.dat -O "$ASSETS_DIR/geoip.dat"
+          wget https://cdn.jsdelivr.net/gh/v2fly/geoip@release/geoip.dat -O "$ASSETS_DIR/geoip.dat"
           wget https://github.com/lhear/v2ray-rules-dat/releases/download/${{ env.GEOSITE_VERSION }}/geosite.dat -O "$ASSETS_DIR/geosite.dat"
 
       - name: Prepare Xray-core v26.1.23 Libraries
