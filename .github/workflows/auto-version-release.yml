@@ -1,16 +1,14 @@
-name: Auto-Version & Release
+name: Manual & Scheduled Release (Xray v26.1.23 Locked)
 on:
   schedule:
-    - cron: '0 23 * * *'
-  workflow_dispatch:
+    - cron: '0 23 * * *' # Berjalan otomatis setiap jam 11 malam
+  workflow_dispatch: # Memungkinkan kamu klik "Run workflow" kapan saja secara manual
 
 jobs:
-  check-for-updates:
+  build-and-release:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    
-    if: github.ref == 'refs/heads/main'
 
     steps:
       - name: Checkout code
@@ -19,80 +17,76 @@ jobs:
           fetch-depth: 0
 
       - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install -y unzip
+        run: sudo apt-get update && sudo apt-get install -y unzip wget
 
-      - name: Get latest Xray-core tag
-        id: get_tag
+      - name: Set Locked Xray-core Version
+        id: vars
         run: |
-          latest_tag=$(curl -sI https://github.com/XTLS/Xray-core/releases/latest | awk '/^location:/ {gsub(/.*tag\/v/, "", $2); gsub(/\r/, "", $2); print $2}')
-          
-          if [ -z "$latest_tag" ]; then
-            echo "Failed to get latest tag" >&2
-            exit 1
-          fi
-          
-          echo "latest_tag=$latest_tag" >> $GITHUB_OUTPUT
-          echo "Latest Xray-core version: v$latest_tag"
+          TARGET_VERSION="26.1.23"
+          echo "target_version=$TARGET_VERSION" >> $GITHUB_OUTPUT
+          echo "Xray-core version locked to: v$TARGET_VERSION"
 
-      - name: Read current version.properties
-        id: read_version
+      - name: Extract Go Version from Target Xray
+        id: download_info
         run: |
-          current_xray=$(grep '^XRAY_CORE_VERSION=' version.properties | sed 's/.*= *//; s/v//; s/ //g' | tr -d '\r')
-          echo "current_xray=$current_xray" >> $GITHUB_OUTPUT
-          echo "Current XRAY_CORE_VERSION: v$current_xray"
-
-      - name: Compare versions
-        id: compare
-        run: |
-          latest_tag="${{ steps.get_tag.outputs.latest_tag }}"
-          current_xray="${{ steps.read_version.outputs.current_xray }}"
-
-          if [ "$(echo -e "$current_xray\n$latest_tag" | sort -V | head -n 1)" != "$latest_tag" ]; then
-            echo "Update available: v$current_xray -> v$latest_tag"
-            echo "update_needed=true" >> $GITHUB_OUTPUT
-            echo "new_xray_version=v$latest_tag" >> $GITHUB_OUTPUT
-          else
-            echo "No update needed" >&2
-            echo "update_needed=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Notify if no update needed
-        if: steps.compare.outputs.update_needed != 'true'
-        run: echo "No Xray-core update available. Current version is up-to-date."
-
-      - name: Download and extract Xray
-        if: steps.compare.outputs.update_needed == 'true'
-        id: download
-        run: |
-          wget -q "https://github.com/XTLS/Xray-core/releases/download/v${{ steps.get_tag.outputs.latest_tag }}/Xray-linux-64.zip"
-          unzip -q -o Xray-linux-64.zip
+          # Ambil info Go Version menggunakan file linux v26.1.23 (hanya untuk log properti)
+          wget -q "https://github.com/XTLS/Xray-core/releases/download/v${{ steps.vars.outputs.target_version }}/Xray-linux-64.zip"
+          unzip -q -o Xray-linux-64.zip xray
           chmod +x xray
-          
           go_version=$(./xray version | grep -o 'go[0-9.]\+' | head -1 | sed 's/go//')
+          rm -f xray Xray-linux-64.zip
           
           if [ -z "$go_version" ]; then
             echo "Failed to extract Go version" >&2
             exit 1
           fi
-          
           echo "go_version=$go_version" >> $GITHUB_OUTPUT
           echo "Extracted Go version: $go_version"
 
-      - name: Update versions and commit
-        if: steps.compare.outputs.update_needed == 'true'
+      - name: Inject Libxray Core v26.1.23 to Android Project
+        run: |
+          # 1. Deteksi letak folder main asli (mengabaikan internal .git cache)
+          MAIN_DIR=$(find . -not -path '*/.*' -type d -name "main" | head -n 1)
+          echo "Folder utama terdeteksi di: $MAIN_DIR"
+          
+          mkdir -p "$MAIN_DIR/jniLibs/arm64-v8a"
+          mkdir -p "$MAIN_DIR/jniLibs/x86_64"
+
+          # 2. Download Libxray Android Versi v26.1.23 (Terkunci)
+          VERSION_TAG="${{ steps.vars.outputs.target_version }}"
+          
+          echo "Mengunduh Xray-core v$VERSION_TAG untuk arm64-v8a..."
+          wget -q "https://github.com/XTLS/Xray-core/releases/download/v${VERSION_TAG}/Xray-android-arm64-v8a.zip"
+          unzip -q Xray-android-arm64-v8a.zip -d arm64_temp
+          mv arm64_temp/xray "$MAIN_DIR/jniLibs/arm64-v8a/libxray.so"
+          
+          echo "Mengunduh Xray-core v$VERSION_TAG untuk x86_64..."
+          wget -q "https://github.com/XTLS/Xray-core/releases/download/v${VERSION_TAG}/Xray-android-x86_64.zip"
+          unzip -q Xray-android-x86_64.zip -d x86_64_temp
+          mv x86_64_temp/xray "$MAIN_DIR/jniLibs/x86_64/libxray.so"
+          
+          # Bersihkan file sampah ekstrasi
+          rm -rf *.zip arm64_temp x86_64_temp
+          echo "[✓] Pustaka libxray.so v26.1.23 sukses dimasukkan."
+
+      - name: Update version.properties and Commit Changes
         id: update_versions
         run: |
-          git pull origin ${{ github.ref }}
+          git pull origin main || git pull origin utama
 
-          sed -i "s/^XRAY_CORE_VERSION=.*/XRAY_CORE_VERSION=${{ steps.compare.outputs.new_xray_version }}/" version.properties
-          sed -i "s/^GO_VERSION=.*/GO_VERSION=${{ steps.download.outputs.go_version }}/" version.properties
+          # Paksa tulis versi ke v26.1.23 dan versi Go yang sesuai
+          sed -i "s/^XRAY_CORE_VERSION=.*/XRAY_CORE_VERSION=v${{ steps.vars.outputs.target_version }}/" version.properties
+          sed -i "s/^GO_VERSION=.*/GO_VERSION=${{ steps.download_info.outputs.go_version }}/" version.properties
           
-          echo "Updated Go and Xray versions in version.properties."
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          
+          # Tambahkan file .so ke Git tracking
           git add version.properties
-          git commit -m "chore: update Xray-core to v${{ steps.get_tag.outputs.latest_tag }}"
+          git add **/jniLibs/**/*.so
+          git commit -m "chore: lock Xray-core to v${{ steps.vars.outputs.target_version }} (allowInsecure enabled)" || echo "No changes to commit"
 
+          # Menaikkan versi aplikasi (App Bump)
           app_code=$(grep '^APP_VERSION_CODE=' version.properties | sed 's/.*= *//; s/ //g')
           app_name=$(grep '^APP_VERSION_NAME=' version.properties | sed 's/.*= *//; s/ //g')
           
@@ -102,20 +96,19 @@ jobs:
           sed -i "s/^APP_VERSION_CODE=.*/APP_VERSION_CODE=$new_app_code/" version.properties
           sed -i "s/^APP_VERSION_NAME=.*/APP_VERSION_NAME=$new_app_name/" version.properties
           
-          echo "Updated app version in version.properties."
           git add version.properties
           git commit -m "chore(release): bump version to $new_app_name"
           git push https://x-access-token:${{ secrets.PAT }}@github.com/${{ github.repository }}.git
           echo "new_app_name=$new_app_name" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
-        if: steps.compare.outputs.update_needed == 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.update_versions.outputs.new_app_name }}
           body: |
-            ### Changes
-            - **Xray-core**: Updated to version **${{ steps.get_tag.outputs.latest_tag }}**
+            ### Release Info
+            - **Xray-core**: Dikunci pada versi **v${{ steps.vars.outputs.target_version }}**
+            - **Fitur Keamanan**: `allowInsecure` tetap aktif & didukung penuh pada versi build ini.
           draft: false
           prerelease: false
           token: ${{ secrets.PAT }}
