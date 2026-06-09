@@ -52,30 +52,32 @@ jobs:
 
       - name: Download Rules Files
         run: |
-          # Mencari folder assets di dalam sub-folder project secara otomatis
-          ASSETS_DIR=$(find . -type d -name "assets" | head -n 1)
+          # Mencari folder assets di dalam sub-folder project dengan mengabaikan internal .git
+          ASSETS_DIR=$(find . -not -path '*/.*' -type d -name "assets" | head -n 1)
           echo "Folder assets ditemukan di: $ASSETS_DIR"
-          wget https://github.com/malikshi/v2ray-rules-dat/releases/latest/download/geosite.dat -O "$ASSETS_DIR/geoip.dat"
-          wget https://github.com/malikshi/v2ray-rules-dat/releases/latest/download/geoip.dat -O "$ASSETS_DIR/geosite.dat"
+          
+          # Unduh aturan terbaru (Nama file dan tujuan sudah disesuaikan dengan benar)
+          wget https://github.com/malikshi/v2ray-rules-dat/releases/latest/download/geoip.dat -O "$ASSETS_DIR/geoip.dat"
+          wget https://github.com/malikshi/v2ray-rules-dat/releases/latest/download/geosite.dat -O "$ASSETS_DIR/geosite.dat"
 
       - name: Prepare Xray-core v26.1.23 Libraries
         run: |
-          # Deteksi otomatis letak folder utama (main) di dalam repositori
-          MAIN_DIR=$(find . -type d -name "main" | head -n 1)
+          # Mengabaikan folder tersembunyi .git agar tidak salah kamar ke submodule cache
+          MAIN_DIR=$(find . -not -path '*/.*' -type d -name "main" | head -n 1)
           echo "Folder utama ditemukan di: $MAIN_DIR"
           
           # Membuat folder jniLibs yang bersih langsung di jalur project yang benar
           mkdir -p "$MAIN_DIR/jniLibs/arm64-v8a"
           mkdir -p "$MAIN_DIR/jniLibs/x86_64"
 
-          # Download dan ekstrak rilis resmi resmi untuk arm64-v8a
+          # Download dan ekstrak rilis resmi untuk arm64-v8a
           echo "Downloading Xray-core v26.1.23 for arm64-v8a..."
           wget -q https://github.com/XTLS/Xray-core/releases/download/v26.1.23/Xray-android-arm64-v8a.zip
           unzip -q Xray-android-arm64-v8a.zip -d arm64_temp
           mv arm64_temp/xray "$MAIN_DIR/jniLibs/arm64-v8a/libxray.so"
           rm -rf Xray-android-arm64-v8a.zip arm64_temp
 
-          # Download dan ekstrak rilis resmi resmi untuk x86_64
+          # Download dan ekstrak rilis resmi untuk x86_64
           echo "Downloading Xray-core v26.1.23 for x86_64..."
           wget -q https://github.com/XTLS/Xray-core/releases/download/v26.1.23/Xray-android-x86_64.zip
           unzip -q Xray-android-x86_64.zip -d x86_64_temp
