@@ -52,8 +52,8 @@ jobs:
           mkdir -p "$MAIN_DIR/jniLibs/arm64-v8a"
           mkdir -p "$MAIN_DIR/jniLibs/x86_64"
 
-          # 2. Download Libxray Android Versi v26.1.23 (Terkunci)
-          VERSION_TAG="${{ steps.vars.outputs.target_version }}"
+          # 2. Ambil nilai versi langsung menggunakan environment variable lokal (Solusi Fix Error 404)
+          VERSION_TAG="26.1.23"
           
           echo "Mengunduh Xray-core v$VERSION_TAG untuk arm64-v8a..."
           wget -q "https://github.com/XTLS/Xray-core/releases/download/v${VERSION_TAG}/Xray-android-arm64-v8a.zip"
@@ -65,7 +65,7 @@ jobs:
           unzip -q Xray-android-x86_64.zip -d x86_64_temp
           mv x86_64_temp/xray "$MAIN_DIR/jniLibs/x86_64/libxray.so"
           
-          # Bersihkan file sampah ekstrasi
+          # Bersihkan file sampah ekstraksi
           rm -rf *.zip arm64_temp x86_64_temp
           echo "[✓] Pustaka libxray.so v26.1.23 sukses dimasukkan."
 
